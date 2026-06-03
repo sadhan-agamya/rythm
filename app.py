@@ -553,4 +553,5 @@ def force_sync(data):
 
 
 if __name__ == "__main__":
-    socketio.run(app, host="0.0.0.0", port=8855, debug=True)
+    port = int(os.environ.get("PORT", 8855))
+    socketio.run(app, host="0.0.0.0", port=port, debug=False)
