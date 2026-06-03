@@ -1,0 +1,9 @@
+venv/
+__pycache__/
+*.pyc
+.env
+rythm.db
+uploads/*
+!uploads/.gitkeep
+static/qr/*
+!static/qr/.gitkeep

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Rythm Host</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#0071e3">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<nav class="nav">
+    <div class="nav-inner">
+        <div class="brand">
+            <div class="brand-icon">&#9835;</div>
+            Rythm Host
+        </div>
+
+        <div class="nav-actions">
+            <div class="status-chip">
+                <span class="dot"></span>
+                <span id="listenerCount">0</span> connected
+            </div>
+            <button class="theme-toggle" onclick="toggleTheme()">&#127769;</button>
+        </div>
+    </div>
+</nav>
+
+<div class="layout">
+
+    <aside class="panel sidebar">
+        <div class="room-card">
+            <h2>{{ room.room_name or "Rythm Room" }}</h2>
+            <p>{{ room.room_description or "Live shared music room" }}</p>
+            <p>Room ID: <b>{{ room_id }}</b></p>
+
+            <img class="qr" src="/static/qr/{{ room_id }}.png" alt="Room QR Code">
+
+            <p>
+                <a href="/room/{{ room_id }}" target="_blank">Open Listener Page</a>
+            </p>
+        </div>
+
+        <hr>
+
+        <div class="section-title">
+            <h2>Add Item</h2>
+        </div>
+
+        <form action="/upload/{{ room_id }}" method="POST" enctype="multipart/form-data">
+
+            <input type="text" name="title" placeholder="Title" required>
+            <input type="text" name="artist" placeholder="Artist / Description">
+
+            <div class="radio-grid">
+                <label class="radio-card">
+                    <input type="radio" name="item_type" value="audio_only" checked>
+                    <span>
+                        <strong>Audio Only</strong>
+                        <small>Upload music file</small>
+                    </span>
+                </label>
+
+                <label class="radio-card">
+                    <input type="radio" name="item_type" value="audio_lyrics">
+                    <span>
+                        <strong>Audio + Lyrics</strong>
+                        <small>Music with lyrics</small>
+                    </span>
+                </label>
+
+                <label class="radio-card">
+                    <input type="radio" name="item_type" value="lyrics_only">
+                    <span>
+                        <strong>Lyrics Only</strong>
+                        <small>No audio required</small>
+                    </span>
+                </label>
+
+                <label class="radio-card">
+                    <input type="radio" name="item_type" value="youtube">
+                    <span>
+                        <strong>YouTube</strong>
+                        <small>Paste video link</small>
+                    </span>
+                </label>
+            </div>
+
+            <input type="file" name="audio" id="audioInput" accept="audio/*">
+            <input type="file" name="cover" id="coverInput" accept="image/*">
+
+            <input type="url" name="youtube_url" id="youtubeInput" placeholder="YouTube URL">
+
+            <textarea name="lyrics" id="lyricsInput" placeholder="Paste lyrics here if needed"></textarea>
+
+            <div class="form-actions">
+                <button type="submit">Add to Playlist</button>
+            </div>
+        </form>
+    </aside>
+
+    <main class="panel">
+        <div class="player-card">
+            <div class="now-wrap">
+                <div class="cover-art">&#9835;</div>
+
+                <div class="player-meta">
+                    <p>Now Playing</p>
+                    <h2 id="hostNowPlaying">Nothing selected</h2>
+                    <p>Control playback for everyone in this room.</p>
+                </div>
+            </div>
+
+            <div class="remote-controller">
+                <button class="remote-btn side" onclick="stopItem()" title="Stop">
+                    <span>&#9632;</span>
+                </button>
+
+                <button class="remote-btn side" onclick="pauseItem()" title="Pause">
+                    <span>&#10074;&#10074;</span>
+                </button>
+
+                <button class="remote-btn main" onclick="playSelected()" title="Play">
+                    <span>&#9654;</span>
+                </button>
+
+                <button class="remote-btn side" onclick="skipItem()" title="Skip">
+                    <span>&#9193;</span>
+                </button>
+
+                <button class="remote-btn sync" onclick="forceSync()" title="Force Sync">
+                    <span>&#8635;</span>
+                </button>
+            </div>
+
+            <audio id="hostAudio" controls></audio>
+            <div id="youtubePlayer" style="display:none;"></div>
+        </div>
+
+        <label class="check-row">
+            <input type="checkbox" id="autoNextToggle" onchange="toggleAutoNext()">
+            Enable Auto-Next
+        </label>
+
+        <div id="lyricsBox" class="lyrics-box">
+            Select an item to view lyrics.
+        </div>
+
+        <hr>
+
+        <div class="section-title">
+            <h2>Playlist</h2>
+        </div>
+
+        <div class="playlist-toolbar">
+            <input type="text" id="playlistSearch" placeholder="Search playlist..." oninput="renderPlaylist()">
+
+            <select id="playlistFilter" onchange="renderPlaylist()">
+                <option value="all">All Items</option>
+                <option value="audio_only">Audio Only</option>
+                <option value="audio_lyrics">Audio + Lyrics</option>
+                <option value="lyrics_only">Lyrics Only</option>
+                <option value="youtube">YouTube Link</option>
+            </select>
+        </div>
+
+        <div id="playlist"></div>
+
+        <hr>
+        <h2>Up Next</h2>
+        <div id="queuePreview"></div>
+    </main>
+
+</div>
+
+<div id="toastContainer"></div>
+
+<script>
+    const ROOM_ID = "{{ room_id }}";
+    const INITIAL_PLAYLIST = {{ room.playlist | tojson }};
+</script>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="https://www.youtube.com/iframe_api"></script>
+<script src="/static/js/host.js"></script>
+<script>
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/static/sw.js");
+}
+</script>
+
+</body>
+</html>

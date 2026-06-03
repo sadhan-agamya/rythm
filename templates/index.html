@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Rythm</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#0071e3">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<nav class="nav">
+    <div class="nav-inner">
+        <div class="brand">
+            <div class="brand-icon">&#9835;</div>
+            Rythm
+        </div>
+    </div>
+</nav>
+
+<main class="container">
+
+    <section class="hero">
+        <div class="eyebrow">Real-time shared listening</div>
+
+        <h1>One room. One rhythm. Everyone in sync.</h1>
+
+        <p>
+            Create a music room, share a QR code, and control songs,
+            YouTube tracks, and lyrics for every connected listener.
+        </p>
+    </section>
+
+    <div class="center-card">
+        <h2>Create Room</h2>
+
+        <form action="/create-room" method="POST">
+            <input type="text" name="room_name" placeholder="Room Name" required>
+            <input type="text" name="room_description" placeholder="Room Description">
+            <input type="password" name="host_pin" placeholder="Set Host/Admin PIN" required>
+
+            <div class="radio-grid">
+                <label class="radio-card">
+                    <input type="radio" name="room_type" value="public" checked>
+                    <span>
+                        <strong>Public Room</strong>
+                        <small>Anyone with the link can join</small>
+                    </span>
+                </label>
+
+                <label class="radio-card">
+                    <input type="radio" name="room_type" value="private">
+                    <span>
+                        <strong>Private Room</strong>
+                        <small>Requires listener PIN</small>
+                    </span>
+                </label>
+            </div>
+
+            <input
+                type="password"
+                name="pin"
+                id="pinInput"
+                placeholder="Set Listener Room PIN"
+                style="display:none;"
+            >
+
+            <div class="form-actions">
+                <button type="submit">Create Room</button>
+            </div>
+        </form>
+    </div>
+
+</main>
+
+<script>
+const pinInput = document.getElementById("pinInput");
+const roomTypeRadios = document.querySelectorAll("input[name='room_type']");
+
+function updateRoomTypeFields() {
+    const selected = document.querySelector("input[name='room_type']:checked");
+    const type = selected ? selected.value : "public";
+
+    if (type === "private") {
+        pinInput.style.display = "block";
+        pinInput.required = true;
+    } else {
+        pinInput.style.display = "none";
+        pinInput.required = false;
+        pinInput.value = "";
+    }
+}
+
+roomTypeRadios.forEach(radio => {
+    radio.addEventListener("change", updateRoomTypeFields);
+});
+
+updateRoomTypeFields();
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/static/sw.js");
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Host Access - Rythm</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#0071e3">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<nav class="nav">
+    <div class="nav-inner">
+        <div class="brand">
+            <div class="brand-icon">&#9835;</div>
+            Rythm Host
+        </div>
+    </div>
+</nav>
+
+<main class="container">
+    <div class="center-card">
+
+        <div class="eyebrow">Host Dashboard</div>
+
+        <h1>Host Access</h1>
+
+        <p>
+            Enter the Host/Admin PIN to control this room.
+        </p>
+
+        <form method="POST">
+
+            <input
+                type="password"
+                name="host_pin"
+                placeholder="Enter Host PIN"
+                required
+            >
+
+            <div class="form-actions">
+                <button type="submit">Open Dashboard</button>
+            </div>
+
+        </form>
+
+        {% if error %}
+        <p style="color:#ef4444; font-weight:700;">
+            {{ error }}
+        </p>
+        {% endif %}
+
+    </div>
+</main>
+
+<script>
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/static/sw.js");
+}
+</script>
+
+</body>
+</html>

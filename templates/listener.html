@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Rythm Room</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#0071e3">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<nav class="nav">
+    <div class="nav-inner">
+        <div class="brand">
+            <div class="brand-icon">&#9835;</div>
+            Rythm Room
+        </div>
+
+        <div class="nav-actions">
+            <div class="status-chip">
+                <span class="dot"></span>
+                <span id="listenerCount">0</span> connected
+            </div>
+            <button class="theme-toggle" onclick="toggleTheme()">&#127769;</button>
+        </div>
+    </div>
+</nav>
+
+<main class="container">
+    <div class="center-card wide">
+
+        <div class="player-card">
+            <div class="now-wrap">
+                <div class="cover-art">&#9835;</div>
+
+                <div class="player-meta">
+                    <p>Room ID: <b>{{ room_id }}</b></p>
+                    <h2 id="nowPlaying">Waiting for host...</h2>
+                    <p>Audio and lyrics are controlled by the host.</p>
+                </div>
+            </div>
+
+            <div class="control-bar">
+                <button class="primary-control" onclick="enablePlayback()">Enable Playback</button>
+            </div>
+
+            <audio id="listenerAudio" controls></audio>
+            <div id="youtubePlayer" style="display:none;"></div>
+        </div>
+
+        <div id="lyricsBox" class="lyrics-box">
+            Lyrics will appear here when available.
+        </div>
+
+        <hr>
+
+        <div class="section-title">
+            <h2>Playlist</h2>
+        </div>
+
+        <div class="playlist-toolbar">
+            <input type="text" id="playlistSearch" placeholder="Search playlist..." oninput="renderPlaylist()">
+
+            <select id="playlistFilter" onchange="renderPlaylist()">
+                <option value="all">All Items</option>
+                <option value="audio_only">Audio Only</option>
+                <option value="audio_lyrics">Audio + Lyrics</option>
+                <option value="lyrics_only">Lyrics Only</option>
+                <option value="youtube">YouTube Link</option>
+            </select>
+        </div>
+
+        <div id="playlist"></div>
+
+        <hr>
+        <h2>Up Next</h2>
+        <div id="queuePreview"></div>
+    </div>
+</main>
+
+<div id="toastContainer"></div>
+
+<script>
+    const ROOM_ID = "{{ room_id }}";
+</script>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="https://www.youtube.com/iframe_api"></script>
+<script src="/static/js/listener.js"></script>
+<script>
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/static/sw.js");
+}
+</script>
+
+</body>
+</html>

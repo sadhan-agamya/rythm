@@ -1,0 +1,9 @@
+{
+  "name": "Rythm",
+  "short_name": "Rythm",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f7fb",
+  "theme_color": "#0071e3",
+  "icons": []
+}
