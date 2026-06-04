@@ -17,7 +17,13 @@ const queuePreview = document.getElementById("queuePreview");
 const playlistSearch = document.getElementById("playlistSearch");
 const playlistFilter = document.getElementById("playlistFilter");
 
-socket.emit("join", { room_id: ROOM_ID });
+socket.on("connect", function () {
+    socket.emit("join", { room_id: ROOM_ID });
+});
+
+socket.on("disconnect", function () {
+    console.log("Disconnected from room");
+});
 
 function showToast(message, type = "success") {
     const container = document.getElementById("toastContainer");

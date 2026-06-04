@@ -1,3 +1,6 @@
+import eventlet
+eventlet.monkey_patch()
+
 import os
 import uuid
 import time
@@ -27,7 +30,13 @@ app.config["MAX_CONTENT_LENGTH"] = 25 * 1024 * 1024
 ALLOWED_AUDIO_EXTENSIONS = {"mp3", "wav", "ogg", "m4a"}
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
+socketio = SocketIO(
+    app,
+    cors_allowed_origins="*",
+    async_mode="eventlet",
+    ping_timeout=60,
+    ping_interval=25
+)
 
 rooms = {}
 room_users = {}
@@ -301,17 +310,22 @@ def handle_join(data):
     room_users[room_id].add(request.sid)
 
     room = rooms.get(room_id)
-    if not room:
-        return
 
-    emit("playlist_updated", room["playlist"])
+    if not room:
+        loaded = load_room(room_id)
+        if not loaded:
+            return
+        rooms[room_id] = loaded
+        room = rooms[room_id]
+
+    emit("playlist_updated", room["playlist"], room=room_id)
 
     emit("sync_state", {
         "current_index": room["current_index"],
         "is_playing": room["is_playing"],
         "position": get_current_position(room),
         "auto_next": room.get("auto_next", False)
-    })
+    }, room=room_id)
 
     socketio.emit("listener_count", {
         "count": len(room_users[room_id])
@@ -553,5 +567,5 @@ def force_sync(data):
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8855))
+    port = int(os.environ.get("PORT", 5000))
     socketio.run(app, host="0.0.0.0", port=port, debug=False)

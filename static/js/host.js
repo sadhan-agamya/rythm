@@ -18,7 +18,14 @@ const queuePreview = document.getElementById("queuePreview");
 const playlistSearch = document.getElementById("playlistSearch");
 const playlistFilter = document.getElementById("playlistFilter");
 
-socket.emit("join", { room_id: ROOM_ID });
+socket.on("connect", function () {
+    socket.emit("join", { room_id: ROOM_ID });
+    showToast("Connected to room", "success");
+});
+
+socket.on("disconnect", function () {
+    showToast("Disconnected. Reconnecting...", "warning");
+});
 
 function showToast(message, type = "success") {
     const container = document.getElementById("toastContainer");
