@@ -297,6 +297,11 @@ function loadItem(index, fallbackItem = null) {
     const ytBox = document.getElementById("youtubePlayer");
     if (ytBox) ytBox.style.display = "none";
 
+    if (currentItem.type === "youtube" && !currentItem.youtube_id) {
+        console.error("Missing YouTube video ID", currentItem);
+        return;
+    }
+
     if (currentItem.type === "youtube" && currentItem.youtube_id) {
         if (ytBox) ytBox.style.display = "block";
 
