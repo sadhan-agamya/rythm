@@ -3,6 +3,8 @@ let youtubeReady = false;
 let pendingYoutubeItem = null;
 let pendingYoutubePosition = 0;
 let pendingYoutubeShouldPlay = false;
+let activeYoutubeItem = null;
+let activeYoutubeId = "";
 
 const socket = io({
     transports: ["polling", "websocket"],
@@ -103,7 +105,9 @@ window.onYouTubeIframeAPIReady = function () {
             },
             onError: (event) => {
                 const message = getYouTubeErrorMessage(event.data);
-                console.error("YouTube listener playback error:", event.data, message);
+                console.error("YouTube listener playback error:", event.data);
+                console.error("Failed item:", activeYoutubeItem);
+                console.error("Failed video ID:", activeYoutubeId);
                 showToast(message, "warning");
             }
         }
@@ -111,13 +115,20 @@ window.onYouTubeIframeAPIReady = function () {
 };
 
 function playYoutubeVideo(videoId, position = 0, shouldPlay = true) {
-    if (!videoId || String(videoId).trim().length !== 11) {
-        console.error("Invalid YouTube ID received:", videoId, currentItem);
+    const cleanYoutubeId = String(videoId || "").trim();
+    activeYoutubeItem = currentItem;
+    activeYoutubeId = cleanYoutubeId;
+
+    console.log("FULL ITEM:", currentItem);
+    console.log("CLEAN YOUTUBE ID:", cleanYoutubeId);
+
+    if (!/^[a-zA-Z0-9_-]{11}$/.test(cleanYoutubeId)) {
+        console.error("Invalid YouTube ID received:", cleanYoutubeId, currentItem);
         return;
     }
 
     if (!youtubeReady || !youtubePlayer) {
-        pendingYoutubeItem = { youtube_id: videoId };
+        pendingYoutubeItem = { youtube_id: cleanYoutubeId };
         pendingYoutubePosition = position;
         pendingYoutubeShouldPlay = shouldPlay;
         return;
@@ -125,14 +136,14 @@ function playYoutubeVideo(videoId, position = 0, shouldPlay = true) {
 
     if (!shouldPlay) {
         youtubePlayer.cueVideoById({
-            videoId: videoId,
+            videoId: cleanYoutubeId,
             startSeconds: position || 0
         });
         return;
     }
 
     youtubePlayer.loadVideoById({
-        videoId: videoId,
+        videoId: cleanYoutubeId,
         startSeconds: position || 0
     });
 }
