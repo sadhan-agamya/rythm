@@ -115,8 +115,9 @@ window.onYouTubeIframeAPIReady = function () {
 };
 
 function playYoutubeVideo(videoId, position = 0, shouldPlay = true) {
-    if (!videoId || !String(videoId).trim()) {
-        console.warn("Skipping YouTube playback due to missing video ID.");
+    if (!videoId || String(videoId).trim().length !== 11) {
+        const item = selectedIndex !== null ? playlist[selectedIndex] : null;
+        console.error("Invalid YouTube ID received:", videoId, item);
         return;
     }
 
