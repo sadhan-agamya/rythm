@@ -4,7 +4,13 @@ let pendingYoutubeItem = null;
 let pendingYoutubePosition = 0;
 let pendingYoutubeShouldPlay = false;
 
-const socket = io();
+const socket = io({
+    transports: ["websocket"],
+    upgrade: false,
+    reconnection: true,
+    reconnectionAttempts: 10,
+    reconnectionDelay: 1000
+});
 
 let playlist = [];
 let currentItem = null;
