@@ -331,6 +331,7 @@ def handle_join(data):
         rooms[room_id] = loaded
         room = rooms[room_id]
 
+    room["playlist"] = get_playlist_db(room_id)
     emit("playlist_updated", room["playlist"], room=room_id)
 
     emit("sync_state", {
@@ -384,7 +385,15 @@ def host_play(data):
     index = data["index"]
     position = float(data.get("position", 0))
 
-    room = rooms[room_id]
+    room = rooms.get(room_id)
+    if not room:
+        return
+
+    room["playlist"] = get_playlist_db(room_id)
+
+    if not room["playlist"]:
+        return
+
     room["current_index"] = index
     room["is_playing"] = True
     room["position"] = position
