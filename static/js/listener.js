@@ -1,11 +1,14 @@
+let youtubePlayer = null;
+let youtubeReady = false;
+let pendingYoutubeItem = null;
+let pendingYoutubePosition = 0;
+let pendingYoutubeShouldPlay = false;
+
 const socket = io();
 
 let playlist = [];
 let currentItem = null;
 let currentPlayingIndex = null;
-
-let youtubePlayer = null;
-let youtubeReady = false;
 
 const playlistDiv = document.getElementById("playlist");
 const listenerAudio = document.getElementById("listenerAudio");
@@ -57,7 +60,15 @@ if (localStorage.getItem("rythm_theme") === "dark") {
     document.body.classList.add("dark-mode");
 }
 
-function onYouTubeIframeAPIReady() {
+function getYouTubeErrorMessage(code) {
+    if (code === 2) return "Invalid YouTube video ID.";
+    if (code === 5) return "The browser could not play this YouTube video.";
+    if (code === 100) return "This YouTube video was not found or is unavailable.";
+    if (code === 101 || code === 150) return "This YouTube video does not allow embedded playback.";
+    return "Unknown YouTube playback error.";
+}
+
+window.onYouTubeIframeAPIReady = function () {
     youtubePlayer = new YT.Player("youtubePlayer", {
         height: "250",
         width: "100%",
@@ -69,13 +80,49 @@ function onYouTubeIframeAPIReady() {
             modestbranding: 1,
             rel: 0,
             iv_load_policy: 3,
-            playsinline: 1
+            playsinline: 1,
+            origin: window.location.origin
         },
         events: {
             onReady: () => {
                 youtubeReady = true;
+
+                if (pendingYoutubeItem) {
+                    playYoutubeVideo(
+                        pendingYoutubeItem.youtube_id,
+                        pendingYoutubePosition,
+                        pendingYoutubeShouldPlay
+                    );
+                }
+            },
+            onError: (event) => {
+                const message = getYouTubeErrorMessage(event.data);
+                console.error("YouTube listener playback error:", event.data, message);
+                showToast(message, "warning");
             }
         }
+    });
+};
+
+function playYoutubeVideo(videoId, position = 0, shouldPlay = true) {
+    if (!youtubeReady || !youtubePlayer) {
+        pendingYoutubeItem = { youtube_id: videoId };
+        pendingYoutubePosition = position;
+        pendingYoutubeShouldPlay = shouldPlay;
+        return;
+    }
+
+    if (!shouldPlay) {
+        youtubePlayer.cueVideoById({
+            videoId: videoId,
+            startSeconds: position || 0
+        });
+        return;
+    }
+
+    youtubePlayer.loadVideoById({
+        videoId: videoId,
+        startSeconds: position || 0
     });
 }
 
@@ -102,25 +149,32 @@ function renderQueuePreview() {
 
     queuePreview.innerHTML = "";
 
-    if (currentPlayingIndex === null || playlist.length === 0) {
-        queuePreview.innerHTML = "<p>No active queue.</p>";
+    if (!playlist || playlist.length === 0) {
+        queuePreview.innerHTML = "<p>No playlist items available.</p>";
         return;
     }
 
-    const nextItems = playlist.slice(currentPlayingIndex + 1, currentPlayingIndex + 4);
-
-    if (nextItems.length === 0) {
-        queuePreview.innerHTML = "<p>No upcoming items.</p>";
-        return;
-    }
-
-    nextItems.forEach((item, i) => {
+    playlist.forEach((item, index) => {
         const div = document.createElement("div");
         div.className = "queue-item";
+
+        if (currentPlayingIndex === index) div.classList.add("playing");
+
+        const typeLabel =
+            item.type === "audio_only" ? "Audio Only" :
+            item.type === "audio_lyrics" ? "Audio + Lyrics" :
+            item.type === "lyrics_only" ? "Lyrics Only" :
+            item.type === "youtube" ? "YouTube" :
+            "Item";
+
         div.innerHTML = `
-            <b>${i + 1}. ${item.title}</b>
-            <small>${item.artist || item.type}</small>
+            <div>
+                <b>${index + 1}. ${item.title}</b>
+                <small>${item.artist || typeLabel}</small>
+            </div>
+            <span class="item-badge">${currentPlayingIndex === index ? "Playing" : typeLabel}</span>
         `;
+
         queuePreview.appendChild(div);
     });
 }
@@ -151,9 +205,12 @@ socket.on("sync_state", function (state) {
         loadItem(state.current_index);
 
         setTimeout(() => {
-            if (state.is_playing && currentItem.type === "youtube" && youtubeReady && youtubePlayer) {
-                youtubePlayer.seekTo(state.position || 0, true);
-                youtubePlayer.playVideo();
+            if (currentItem.type === "youtube" && currentItem.youtube_id) {
+                playYoutubeVideo(
+                    currentItem.youtube_id,
+                    state.position || 0,
+                    state.is_playing
+                );
             } else if (state.is_playing && currentItem.audio_url) {
                 listenerAudio.currentTime = state.position || 0;
                 listenerAudio.play();
@@ -176,9 +233,8 @@ socket.on("play_item", function (data) {
     renderPlaylist();
 
     setTimeout(() => {
-        if (data.item.type === "youtube" && youtubeReady && youtubePlayer) {
-            youtubePlayer.seekTo(data.position || 0, true);
-            youtubePlayer.playVideo();
+        if (data.item.type === "youtube" && data.item.youtube_id) {
+            playYoutubeVideo(data.item.youtube_id, data.position || 0, true);
         } else if (data.item.audio_url) {
             listenerAudio.currentTime = data.position || 0;
             listenerAudio.play();
@@ -233,10 +289,7 @@ function loadItem(index) {
     if (currentItem.type === "youtube" && currentItem.youtube_id) {
         if (ytBox) ytBox.style.display = "block";
 
-        if (youtubeReady && youtubePlayer) {
-            youtubePlayer.loadVideoById(currentItem.youtube_id);
-            youtubePlayer.pauseVideo();
-        }
+        playYoutubeVideo(currentItem.youtube_id, 0, false);
     } else if (currentItem.audio_url) {
         listenerAudio.src = currentItem.audio_url;
         listenerAudio.style.display = "block";
@@ -316,10 +369,19 @@ function renderPlaylist() {
 function enablePlayback() {
     listenerAudio.play().then(() => {
         listenerAudio.pause();
-        showToast("Playback enabled. Host can now sync audio.", "success");
-    }).catch(() => {
-        showToast("Playback is still blocked. Interact with the page and try again.", "warning");
-    });
+    }).catch(() => {});
+
+    if (youtubeReady && youtubePlayer) {
+        youtubePlayer.mute();
+        youtubePlayer.playVideo();
+
+        setTimeout(() => {
+            youtubePlayer.pauseVideo();
+            youtubePlayer.unMute();
+        }, 500);
+    }
+
+    alert("Playback enabled. Host can now sync audio.");
 }
 
 renderCoverArt();

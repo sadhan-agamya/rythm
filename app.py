@@ -64,15 +64,28 @@ def extract_youtube_id(url):
         return None
 
     parsed = urlparse(url)
+    host = parsed.netloc.lower()
+    path = parsed.path.strip("/")
 
-    if parsed.netloc in ["www.youtube.com", "youtube.com"]:
+    if host in ["www.youtube.com", "youtube.com", "m.youtube.com", "music.youtube.com"]:
         query = parse_qs(parsed.query)
-        return query.get("v", [None])[0]
+        video_id = query.get("v", [None])[0]
+        if video_id:
+            return video_id
 
-    if parsed.netloc in ["youtu.be", "www.youtu.be"]:
-        return parsed.path.strip("/")
+        if path.startswith("shorts/"):
+            return path.split("shorts/")[-1].split("/")[0]
 
-    if "youtube.com" in parsed.netloc and "/shorts/" in parsed.path:
+        if path.startswith("embed/"):
+            return path.split("embed/")[-1].split("/")[0]
+
+        if path.startswith("live/"):
+            return path.split("live/")[-1].split("/")[0]
+
+    if host in ["youtu.be", "www.youtu.be"]:
+        return path.split("/")[0] if path else None
+
+    if "youtube.com" in host and "/shorts/" in parsed.path:
         return parsed.path.split("/shorts/")[-1].split("/")[0]
 
     return None
@@ -320,11 +333,18 @@ def handle_join(data):
 
     emit("playlist_updated", room["playlist"], room=room_id)
 
+    current_item = None
+
+    if room["current_index"] is not None and room["playlist"]:
+        if 0 <= room["current_index"] < len(room["playlist"]):
+            current_item = room["playlist"][room["current_index"]]
+
     emit("sync_state", {
         "current_index": room["current_index"],
         "is_playing": room["is_playing"],
         "position": get_current_position(room),
-        "auto_next": room.get("auto_next", False)
+        "auto_next": room.get("auto_next", False),
+        "item": current_item
     }, room=room_id)
 
     socketio.emit("listener_count", {
@@ -565,7 +585,15 @@ def force_sync(data):
         "auto_next": room.get("auto_next", False)
     }, room=room_id)
 
+@app.route("/debug/room/<room_id>")
+def debug_room(room_id):
+    return {
+        "room_id": room_id,
+        "memory_playlist": rooms.get(room_id, {}).get("playlist", []),
+        "db_playlist": get_playlist_db(room_id)
+    }
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    socketio.run(app, host="0.0.0.0", port=port, debug=False)
+    port = int(os.environ.get("PORT", 8855))
+    # socketio.run(app, host="0.0.0.0", port=port, debug=False)
+    socketio.run(app, host="0.0.0.0", port=port, debug=True,use_reloader=False,allow_unsafe_werkzeug=True)
