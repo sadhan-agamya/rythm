@@ -5,8 +5,8 @@ let pendingYoutubePosition = 0;
 let pendingYoutubeShouldPlay = false;
 
 const socket = io({
-    transports: ["websocket"],
-    upgrade: false,
+    transports: ["polling", "websocket"],
+    upgrade: true,
     reconnection: true,
     reconnectionAttempts: 10,
     reconnectionDelay: 1000
@@ -115,6 +115,11 @@ window.onYouTubeIframeAPIReady = function () {
 };
 
 function playYoutubeVideo(videoId, position = 0, shouldPlay = true) {
+    if (!videoId || !String(videoId).trim()) {
+        console.warn("Skipping YouTube playback due to missing video ID.");
+        return;
+    }
+
     if (!youtubeReady || !youtubePlayer) {
         pendingYoutubeItem = { youtube_id: videoId };
         pendingYoutubePosition = position;
@@ -233,16 +238,16 @@ socket.on("sync_state", function (state) {
 
     currentPlayingIndex = state.current_index;
 
-    if (state.current_index !== null && playlist[state.current_index]) {
+    if (state.current_index !== null) {
         selectedIndex = state.current_index;
-        loadItem(selectedIndex);
+        loadItem(selectedIndex, state.item || null);
 
-        const item = playlist[selectedIndex];
+        const item = playlist[selectedIndex] || state.item;
 
         setTimeout(() => {
-            if (item.type === "youtube" && item.youtube_id) {
+            if (item && item.type === "youtube" && item.youtube_id) {
                 playYoutubeVideo(item.youtube_id, state.position || 0, state.is_playing);
-            } else if (state.is_playing && item.audio_url) {
+            } else if (item && state.is_playing && item.audio_url) {
                 hostAudio.currentTime = state.position || 0;
                 hostAudio.play();
             }
@@ -256,7 +261,7 @@ socket.on("play_item", function (data) {
     selectedIndex = data.index;
     currentPlayingIndex = data.index;
 
-    loadItem(selectedIndex);
+    loadItem(selectedIndex, data.item || null);
     renderPlaylist();
 
     const item = data.item;
@@ -380,10 +385,12 @@ function renderPlaylist() {
     renderQueuePreview();
 }
 
-function loadItem(index) {
-    if (index === null || !playlist[index]) return;
+function loadItem(index, fallbackItem = null) {
+    if (index === null) return;
 
-    const item = playlist[index];
+    const item = playlist[index] || fallbackItem;
+
+    if (!item) return;
 
     if (hostNowPlaying) {
         hostNowPlaying.innerText = item.title || "Untitled";

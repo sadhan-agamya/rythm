@@ -333,18 +333,12 @@ def handle_join(data):
 
     emit("playlist_updated", room["playlist"], room=room_id)
 
-    current_item = None
-
-    if room["current_index"] is not None and room["playlist"]:
-        if 0 <= room["current_index"] < len(room["playlist"]):
-            current_item = room["playlist"][room["current_index"]]
-
     emit("sync_state", {
         "current_index": room["current_index"],
         "is_playing": room["is_playing"],
         "position": get_current_position(room),
         "auto_next": room.get("auto_next", False),
-        "item": current_item
+        "item": get_current_item(room)
     }, room=room_id)
 
     socketio.emit("listener_count", {
@@ -369,6 +363,19 @@ def get_current_position(room):
     if room["is_playing"] and room["last_started"] is not None:
         return room["position"] + (time.time() - float(room["last_started"]))
     return room["position"]
+
+
+def get_current_item(room):
+    current_index = room.get("current_index")
+    playlist = room.get("playlist") or []
+
+    if current_index is None:
+        return None
+
+    if 0 <= current_index < len(playlist):
+        return playlist[current_index]
+
+    return None
 
 
 @socketio.on("host_play")
@@ -514,7 +521,8 @@ def move_item(data):
         "current_index": room["current_index"],
         "is_playing": room["is_playing"],
         "position": get_current_position(room),
-        "auto_next": room.get("auto_next", False)
+        "auto_next": room.get("auto_next", False),
+        "item": get_current_item(room)
     }, room=room_id)
 
 
@@ -582,7 +590,8 @@ def force_sync(data):
         "current_index": room["current_index"],
         "is_playing": room["is_playing"],
         "position": get_current_position(room),
-        "auto_next": room.get("auto_next", False)
+        "auto_next": room.get("auto_next", False),
+        "item": get_current_item(room)
     }, room=room_id)
 
 @app.route("/debug/room/<room_id>")

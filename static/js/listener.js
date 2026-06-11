@@ -5,8 +5,8 @@ let pendingYoutubePosition = 0;
 let pendingYoutubeShouldPlay = false;
 
 const socket = io({
-    transports: ["websocket"],
-    upgrade: false,
+    transports: ["polling", "websocket"],
+    upgrade: true,
     reconnection: true,
     reconnectionAttempts: 10,
     reconnectionDelay: 1000
@@ -111,6 +111,11 @@ window.onYouTubeIframeAPIReady = function () {
 };
 
 function playYoutubeVideo(videoId, position = 0, shouldPlay = true) {
+    if (!videoId || !String(videoId).trim()) {
+        console.warn("Skipping YouTube playback due to missing video ID.");
+        return;
+    }
+
     if (!youtubeReady || !youtubePlayer) {
         pendingYoutubeItem = { youtube_id: videoId };
         pendingYoutubePosition = position;
@@ -206,21 +211,21 @@ socket.on("playlist_updated", function (data) {
 });
 
 socket.on("sync_state", function (state) {
-    if (state.current_index !== null && playlist[state.current_index]) {
+    if (state.current_index !== null) {
         currentPlayingIndex = state.current_index;
-        loadItem(state.current_index);
+        loadItem(state.current_index, state.item || null);
 
         setTimeout(() => {
-            if (currentItem.type === "youtube" && currentItem.youtube_id) {
+            if (currentItem && currentItem.type === "youtube" && currentItem.youtube_id) {
                 playYoutubeVideo(
                     currentItem.youtube_id,
                     state.position || 0,
                     state.is_playing
                 );
-            } else if (state.is_playing && currentItem.audio_url) {
+            } else if (currentItem && state.is_playing && currentItem.audio_url) {
                 listenerAudio.currentTime = state.position || 0;
                 listenerAudio.play();
-            } else if (!state.is_playing && currentItem.audio_url) {
+            } else if (currentItem && !state.is_playing && currentItem.audio_url) {
                 listenerAudio.pause();
                 listenerAudio.currentTime = state.position || 0;
             }
@@ -235,7 +240,7 @@ socket.on("sync_state", function (state) {
 
 socket.on("play_item", function (data) {
     currentPlayingIndex = data.index;
-    loadItem(data.index);
+    loadItem(data.index, data.item || null);
     renderPlaylist();
 
     setTimeout(() => {
@@ -278,8 +283,8 @@ socket.on("stop_item", function () {
     renderPlaylist();
 });
 
-function loadItem(index) {
-    currentItem = playlist[index];
+function loadItem(index, fallbackItem = null) {
+    currentItem = playlist[index] || fallbackItem;
 
     if (!currentItem) return;
 
